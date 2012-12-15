@@ -1,0 +1,116 @@
+<html>
+    <script>
+
+    function handleMessage(messageEvent) {
+        try {
+            switch (messageEvent.name) {
+                case 'updateBreadCrumbs':
+                    var body = document.body;
+                    var nodes = document.body.childNodes;
+                    for (var i = nodes.length - 1; i >= 0; i--) {
+                        body.removeChild(nodes[i]);
+                    }
+
+                    var url = safari.application.activeBrowserWindow.activeTab.url;
+
+                    if (url.indexOf('safari-extension://') == 0) {
+                        return;
+                    }
+                
+                    if (url.length > 1 && url.charAt(url.length - 1) == '/') {
+                        url = url.substring(0, url.length - 1);
+                    }
+
+                    var component = '';
+                    var subUrl = '';
+                    var printed = false;
+
+                    for (var i = 0; i < url.length; i++) {
+                        var ch = url.charAt(i);
+                        if (ch == '/') {
+                            // check protocol
+                            if (url.charAt(i + 1) == '/') {
+                                component += ch + '/';
+                                subUrl += ch + '/';
+                                ++i;
+                            } else {
+                                appendLink(body, subUrl, component);
+                                printed = true;
+                                component = '';
+                                subUrl += '/';
+                            }
+                        } else if (ch == '#' || ch == '?') {
+                            // skip everything after hash and parameters
+                            // also last component (the path is skipped)
+                            break;
+                        } else {
+                            component += ch;
+                            subUrl += ch;
+                        }
+                    }
+                    if (!printed) {
+                        appendLink(body, subUrl, component);
+                    }
+                }
+        } catch(e) {
+            console.log(e);
+        }
+    }
+
+    function appendLink(parent, url, label) {
+        if (!url) {
+            return;
+        }
+        var link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('title', url);
+        link.appendChild(document.createTextNode(label));
+        parent.appendChild(link);
+        parent.appendChild(document.createTextNode('/'));
+    }
+
+    function handleMessage11(messageEvent) {
+       switch (messageEvent.name) {
+          case 'updateBreadCrumbs':
+            try {
+                var body = document.body;
+                var nodes = document.body.childNodes;
+                for (var i = nodes.length - 1; i >= 0; i--) {
+                    body.removeChild(nodes[i]);
+                }
+
+                var url = safari.application.activeBrowserWindow.activeTab
+                    .url.replace(/#.*$/, '')
+                    .replace(/\?.*$/, '');
+                if (url.indexOf('safari-extension://') == 0) {
+                    return;
+                }
+                
+                if (url.charAt(url.length - 1) != '/') {
+		  url += '/';
+                }
+                var breadcrumbUrls = url.split('/');
+	      
+                if (breadcrumbUrls.length) {
+                    breadcrumbUrls.pop();
+                    for (var i = 3; i < breadcrumbUrls.length; i++) {
+                        var path = breadcrumbUrls[i - 1];
+                        var breadUrl = breadcrumbUrls.slice(0, i).join('/');
+                        var link = document.createElement('a');
+                        link.setAttribute('href', breadUrl);
+                        link.setAttribute('title', breadUrl);
+                        link.appendChild(document.createTextNode(path))
+                        body.appendChild(link);
+                        body.appendChild(document.createTextNode(' / '));
+		  }
+	      }
+            } catch(e) {
+                console.log(e);
+            }
+             break;
+       }
+    }
+
+    safari.application.addEventListener("message", handleMessage, false);
+    </script>
+</html>
